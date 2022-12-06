@@ -1,0 +1,117 @@
+---
+title: "Untitled"
+output: html_document
+date: "2022-12-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Read In Data Set
+
+```{r}
+library(readr)
+library(tidyverse)
+library(skimr)
+disney <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_movies_total_gross.csv")
+```
+
+```{r}
+skim_without_charts(disney)
+```
+
+# Data Cleaning
+
+```{r}
+library(dplyr)
+
+disney2 <- disney |>
+  mutate(genre = factor(genre), 
+         rating = factor(MPAA_rating, levels = c("G", "PG", "PG-13", "R")), 
+         gross = parse_number(inflation_adjusted_gross),
+         release_date = as.Date(release_date, format = "%b %d, %Y"),
+         release_year = format(release_date, "%Y"),
+         gross_million = round(gross/1000000, digits = 1),
+         gross_K = round(gross/1000, digits =3)) |>
+  select(-total_gross, -inflation_adjusted_gross, -MPAA_rating ) |>
+  drop_na()
+```
+
+# Exporatory Data Analysis
+
+```{r}
+skim_without_charts(disney2)
+```
+
+## Ratings
+
+```{r}
+disney2 |>
+  group_by(rating) |>
+  summarize(n = n()) |>
+  ggplot(aes(x = reorder(rating, -n), y = n)) + 
+  geom_col() + ggtitle("Top ratings")
+```
+
+## Genres
+
+```{r}
+disney2 |>
+  select(genre) |>
+  group_by(genre) |>
+  summarise(n = n()) |>
+  ggplot(aes(x = reorder(genre, n), y = n)) + 
+  geom_col() +  coord_flip() + ggtitle("Top genres")
+```
+
+## Years 
+
+```{r}
+disney2 |>
+  select(release_year) |>
+  group_by(release_year) |>
+  summarise(n = n()) |>
+  ggplot(aes(x = release_year, y = n)) + 
+  geom_col() + coord_flip() + ggtitle("Movie Count Per Year")
+```
+
+
+## Top Grossing Movies
+
+```{r}
+disney2 |>
+  ungroup() |>
+  mutate(movie_title = reorder(movie_title, desc(gross_million))) |>
+  head(10)  |>
+  ggplot(aes(x = reorder(movie_title, gross_million), y = gross_million)) + 
+  geom_col(aes(fill = genre)) + coord_flip() + ggtitle("Top Grossing Movies (Millions of Dollars)")
+```
+
+# Questions
+
+## Does release year predict gross revenue? 
+
+```{r}
+disney2 |>
+  mutate(release_year = as.numeric(release_year)) |>
+  ggplot(aes(x = release_year, y = gross_K)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue")
+```
+
+```{r}
+disney3 <- disney2 |>
+  filter(release_year >= 1990) |>
+  mutate(release_year = as.numeric(release_year))
+
+disney3 |>
+ggplot( aes(x = release_year, y = gross_K)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue")
+
+```
+
+
+
+
