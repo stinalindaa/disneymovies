@@ -185,15 +185,21 @@ disney4 <- disney2 |>
 disney4
 ```
 
-
+## Yearly Summary
 
 ```{r}
-yearly.summary <- disney4 |> inner_join(revenue, by = c("Year" = "Year")) |>
+movies.revenue <- disney4 |> inner_join(revenue, by = c("Year" = "Year")) 
+
+yearly.summary <- movies.revenue |>
   group_by(Year, Total) |>
   summarize(movie_count = n()) |>
   rename(total_revenue = Total) |>
   ungroup()
+```
 
+
+
+```{r}
 head(yearly.summary)
 
 yearly.summary |>
@@ -231,6 +237,48 @@ mod3 <- yearly.summary |>
 summary(mod3)
 ```
 
+## Add more variables to the model 
+
+```{r}
+movies.revenue2 <- movies.revenue |>
+  mutate(action = ifelse(genre == "Action", 1, 0),
+         adventure = ifelse(genre == "Adventure",1,0),
+         musical = ifelse(genre == "Musical", 1, 0),
+         drama = ifelse(genre == "Drama", 1, 0),
+         comedy = ifelse(genre == "Comedy", 1, 0))
+
+head(movies.revenue2)
+```
+## yearly summary with count of top genres
+
+```{r}
+yearly.summary2 <- movies.revenue2 |>
+  group_by(Year, Total) |>
+  summarize(movie_count = n(),
+            action_count = sum(action),
+            adventure = sum(adventure),
+            musical = sum(musical),
+            drama = sum(drama),
+            comedy = sum(comedy)) |>
+  rename(total_revenue = Total) |>
+  ungroup()
+
+head(yearly.summary2)
+```
+
+## model with count of top genres
+
+```{r, message = FALSE, warning = FALSE}
+yearly.summary2 |>
+  ggpairs()
+```
+
+```{r}
+mod4 <- yearly.summary2 |>
+  lm(formula = total_revenue ~ drama + comedy + Year)
+
+summary(mod4)
+```
 
 
 
