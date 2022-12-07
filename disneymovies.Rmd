@@ -210,10 +210,25 @@ yearly.summary |>
 ```
 
 ```{r}
+yearly.summary |>
+  ggplot(aes(x = movie_count, y = total_revenue)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
 library(GGally)
 yearly.summary |>
   mutate(movie_count = sqrt(movie_count)) |>
   ggpairs()
+```
+## Model 
+
+```{r}
+mod3 <- yearly.summary |>
+  lm(formula = total_revenue ~ Year)
+
+summary(mod3)
 ```
 
 
