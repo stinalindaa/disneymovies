@@ -31,7 +31,7 @@ disney2 <- disney |>
          rating = factor(MPAA_rating, levels = c("G", "PG", "PG-13", "R")), 
          gross = parse_number(inflation_adjusted_gross),
          release_date = as.Date(release_date, format = "%b %d, %Y"),
-         release_year = format(release_date, "%Y"),
+         release_year = as.numeric(format(release_date, "%Y")),
          gross_million = round(gross/1000000, digits = 1),
          gross_K = round(gross/1000, digits =3)) |>
   select(-total_gross, -inflation_adjusted_gross, -MPAA_rating ) |>
@@ -88,9 +88,23 @@ disney2 |>
   geom_col(aes(fill = genre)) + coord_flip() + ggtitle("Top Grossing Movies (Millions of Dollars)")
 ```
 
+## Bottom Grossing Movies
+
+```{r}
+disney2 |>
+  ungroup() |>
+  arrange(movie_title = reorder(movie_title, gross)) |>
+  head(10)  |>
+  ggplot(aes(x = reorder(movie_title, -gross), y = gross)) + 
+  geom_col(aes(fill = genre)) + coord_flip() + ggtitle("Bottom Grossing Movies (Millions of Dollars)")
+```
+
+
 # Questions
 
 ## Does release year predict gross revenue? 
+
+## Plot the model
 
 ```{r}
 disney2 |>
@@ -100,17 +114,117 @@ disney2 |>
   geom_smooth(method = "lm", se = FALSE, color = "blue")
 ```
 
+## Choose a subset to analyze by year
+
 ```{r}
 disney3 <- disney2 |>
   filter(release_year >= 1990) |>
   mutate(release_year = as.numeric(release_year))
+```
 
-disney3 |>
-ggplot( aes(x = release_year, y = gross_K)) +
-  geom_point() + 
-  geom_smooth(method = "lm", se = FALSE, color = "blue")
+```{r}
+ggplot(disney3, aes(x = release_year, y = gross_million)) +
+  geom_point(shape = 21, colour = 'black', fill = 'white') +
+  labs(x = 'Release Year', y = '$ Gross Million') +
+  geom_smooth(method='lm', se=FALSE, aes(color = genre)) +
+  ggtitle('$ Gross Million vs Release Year') +
+  theme_bw()
+```
+
+## Further subset the data for genre
+
+```{r}
+genres = c("Action", "Adventure")
+disney4 <- disney3 |>
+  filter(genre %in% genres )
+```
+
+
+```{r}
+ggplot(disney4, aes(x = release_year, y = gross_million)) +
+  geom_point(shape = 21, aes(colour = genre), fill = 'white') +
+  labs(x = 'Release Year', y = '$ Gross Million') +
+  geom_smooth(method='lm', se=FALSE, aes(color = genre)) +
+  ggtitle('$ Gross Million vs Release Year') +
+  theme_bw()
+```
+
+
+
+## Build a model 
+
+```{r}
+mod <- disney2 |>
+  lm(formula = gross ~ release_year + genre + rating)
+summary(mod)
 
 ```
+
+```{r}
+mod2 <- 
+  disney2 |>
+  lm(formula = gross ~ genre + rating)
+
+summary(mod2)
+```
+
+## Read in other data set 
+
+```{r}
+library(readr)
+revenue <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_revenue_1991-2016.csv")
+
+revenue1 <- revenue |>
+  mutate(Year = as.numeric(Year))
+```
+
+
+```{r}
+disney4 <- disney2 |>
+  mutate(Year = release_year)
+disney4
+```
+
+
+
+```{r}
+yearly.summary <- disney4 |> inner_join(revenue, by = c("Year" = "Year")) |>
+  group_by(Year, Total) |>
+  summarize(movie_count = n()) |>
+  rename(total_revenue = Total) |>
+  ungroup()
+
+head(yearly.summary)
+
+yearly.summary |>
+  ggplot(aes(x = Year, y = total_revenue)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+yearly.summary |>
+  ggplot(aes(x = Year, y = movie_count)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+library(GGally)
+yearly.summary |>
+  mutate(movie_count = sqrt(movie_count)) |>
+  ggpairs()
+```
+
+
+
+
+# Challenges 
+
+- Translate gross revenue from a text variable to a numeric variable 
+- We can't get a very high R^2 value with the variables we have in this data set
+
+
 
 
 
