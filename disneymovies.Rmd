@@ -40,6 +40,7 @@ disney2 <- disney |>
 
 # Exporatory Data Analysis
 
+## Skim 
 ```{r}
 skim_without_charts(disney2)
 ```
@@ -47,62 +48,55 @@ skim_without_charts(disney2)
 ## Ratings
 
 ```{r}
+
+colors = c("thistle3", "thistle4", "rosybrown3", "rosybrown4")
+
 disney2 |>
   group_by(rating) |>
   summarize(n = n()) |>
   ggplot(aes(x = reorder(rating, -n), y = n)) + 
-  geom_col() + ggtitle("Top ratings")
+  geom_col(aes(fill = reorder(rating,n)), color = "black", size = 0.2) +   
+  scale_fill_manual(values = colors) +
+  ggtitle("Top ratings")+ labs(x = "count", y = "Rating") + 
+  theme_minimal() + theme(legend.position = "none")
+
+
 ```
 
-## Genres
+## Genres (pink pallet)
 
 ```{r}
+colors4 = c("thistle4", "thistle3", "rosybrown4", "rosybrown3", "lightpink4", "lightpink3")
+
 disney2 |>
   select(genre) |>
   group_by(genre) |>
   summarise(n = n()) |>
+  head(6) |>
   ggplot(aes(x = reorder(genre, n), y = n)) + 
-  geom_col() +  coord_flip() + ggtitle("Top genres")
+  geom_col(aes(fill = reorder(genre, -n)), color = "black", size = .2) +
+  scale_fill_manual(values = colors4) + coord_flip() + 
+  ggtitle("Top genres") + labs(x = "Genre", y = "Count") + 
+  theme_minimal() + theme(legend.position = "none")
+
 ```
 
-## Years 
+
+## Movie Count Per Year 
 
 ```{r}
 disney2 |>
   select(release_year) |>
+  filter(release_year >= 1991) |>
   group_by(release_year) |>
   summarise(n = n()) |>
   ggplot(aes(x = release_year, y = n)) + 
-  geom_col() + coord_flip() + ggtitle("Movie Count Per Year")
+  geom_col(fill = "thistle3", color = "black", size = 0.2)+ 
+  ggtitle("Movie Count Per Year") + 
+  theme_minimal() + labs(x = "Release Year", y = "Count")
 ```
 
-
-## Top Grossing Movies
-
-```{r}
-disney2 |>
-  ungroup() |>
-  mutate(movie_title = reorder(movie_title, desc(gross_million))) |>
-  head(10)  |>
-  ggplot(aes(x = reorder(movie_title, gross_million), y = gross_million)) + 
-  geom_col(aes(fill = genre)) + coord_flip() + ggtitle("Top Grossing Movies (Millions of Dollars)")
-```
-
-## Bottom Grossing Movies
-
-```{r}
-disney2 |>
-  ungroup() |>
-  arrange(movie_title = reorder(movie_title, gross)) |>
-  head(10)  |>
-  ggplot(aes(x = reorder(movie_title, -gross), y = gross)) + 
-  geom_col(aes(fill = genre)) + coord_flip() + ggtitle("Bottom Grossing Movies (Millions of Dollars)")
-```
-
-
-# Questions
-
-## Does release year predict gross revenue? 
+# Model release year on gross
 
 ## Plot the model
 
@@ -114,7 +108,7 @@ disney2 |>
   geom_smooth(method = "lm", se = FALSE, color = "blue")
 ```
 
-## Choose a subset to analyze by year
+## Subset data 
 
 ```{r}
 disney3 <- disney2 |>
@@ -131,14 +125,11 @@ ggplot(disney3, aes(x = release_year, y = gross_million)) +
   theme_bw()
 ```
 
-## Further subset the data for genre
-
 ```{r}
 genres = c("Action", "Adventure")
 disney4 <- disney3 |>
   filter(genre %in% genres )
 ```
-
 
 ```{r}
 ggplot(disney4, aes(x = release_year, y = gross_million)) +
@@ -149,13 +140,11 @@ ggplot(disney4, aes(x = release_year, y = gross_million)) +
   theme_bw()
 ```
 
-
-
 ## Build a model 
 
 ```{r}
 mod <- disney2 |>
-  lm(formula = gross ~ release_year + genre + rating)
+  lm(formula = gross ~ release_year)
 summary(mod)
 
 ```
@@ -167,6 +156,17 @@ mod2 <-
 
 summary(mod2)
 ```
+
+```{r}
+mod3 <- 
+  disney2 |>
+  lm(formula = gross ~ release_year + genre + rating)
+
+summary(mod3)
+```
+
+
+# Model year on total disney revenue
 
 ## Read in other data set 
 
@@ -197,6 +197,27 @@ yearly.summary <- movies.revenue |>
   ungroup()
 ```
 
+## Histogram of revenue
+
+```{r}
+yearly.summary |>
+  ggplot(aes(x = total_revenue)) +
+  geom_histogram(bins = 15, fill = "thistle3", color = "black", size = 0.2)+ 
+  ggtitle("Histogram of Yearly Revenue For Disney") + 
+  theme_minimal() + labs(x = "Yearly Revenue", y = "Count")
+```
+
+## Histogram of movie count 
+
+```{r}
+yearly.summary |>
+  ggplot(aes(x = movie_count)) +
+  geom_histogram(bins = 15, fill = "thistle3", color = "black", size = 0.2)+ 
+  ggtitle("Histogram of Yearly Movie Count") + 
+  theme_minimal() + labs(x = "Yearly Movie Count", y = "Count")
+
+```
+
 
 
 ```{r}
@@ -205,36 +226,32 @@ head(yearly.summary)
 yearly.summary |>
   ggplot(aes(x = Year, y = total_revenue)) +
   geom_point(shape = 21, color = "black") + 
-  geom_smooth(method = "lm", se = FALSE)
+  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
+  theme_minimal()
 ```
 
-```{r}
-yearly.summary |>
-  ggplot(aes(x = Year, y = movie_count)) +
-  geom_point(shape = 21, color = "black") + 
-  geom_smooth(method = "lm", se = FALSE)
-```
 
 ```{r}
 yearly.summary |>
   ggplot(aes(x = movie_count, y = total_revenue)) +
   geom_point(shape = 21, color = "black") + 
-  geom_smooth(method = "lm", se = FALSE)
+  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
+  theme_minimal()
 ```
 
 ```{r}
 library(GGally)
 yearly.summary |>
   mutate(movie_count = sqrt(movie_count)) |>
-  ggpairs()
+  ggpairs() + theme_minimal()
 ```
-## Model 
+## Model regressing revenue on year
 
 ```{r}
-mod3 <- yearly.summary |>
+mod4 <- yearly.summary |>
   lm(formula = total_revenue ~ Year)
 
-summary(mod3)
+summary(mod4)
 ```
 
 ## Add more variables to the model 
