@@ -35,7 +35,8 @@ disney2 <- disney |>
          gross_million = round(gross/1000000, digits = 1),
          gross_K = round(gross/1000, digits =3)) |>
   select(-total_gross, -inflation_adjusted_gross, -MPAA_rating ) |>
-  drop_na()
+  drop_na() |>
+  filter(release_year >= 1992)
 ```
 
 # Exporatory Data Analysis
@@ -57,7 +58,7 @@ disney2 |>
   ggplot(aes(x = reorder(rating, -n), y = n)) + 
   geom_col(aes(fill = reorder(rating,n)), color = "black", size = 0.2) +   
   scale_fill_manual(values = colors) +
-  ggtitle("Top ratings")+ labs(x = "count", y = "Rating") + 
+  ggtitle("Top Movie Ratings")+ labs(x = "MPAA Rating", y = "Count") + 
   theme_minimal() + theme(legend.position = "none")
 
 
@@ -73,9 +74,9 @@ disney2 |>
   group_by(genre) |>
   summarise(n = n()) |>
   head(6) |>
-  ggplot(aes(x = reorder(genre, n), y = n)) + 
+  ggplot(aes(x = reorder(genre, -n), y = n)) + 
   geom_col(aes(fill = reorder(genre, -n)), color = "black", size = .2) +
-  scale_fill_manual(values = colors4) + coord_flip() + 
+  scale_fill_manual(values = colors4) +
   ggtitle("Top genres") + labs(x = "Genre", y = "Count") + 
   theme_minimal() + theme(legend.position = "none")
 
@@ -92,13 +93,13 @@ disney2 |>
   summarise(n = n()) |>
   ggplot(aes(x = release_year, y = n)) + 
   geom_col(fill = "thistle3", color = "black", size = 0.2)+ 
-  ggtitle("Movie Count Per Year") + 
+  ggtitle("Histogram of Movie Release Year") + 
   theme_minimal() + labs(x = "Release Year", y = "Count")
 ```
 
-# Model release year on gross
+# Release Year v Gross
 
-## Plot the model
+## Linear Plot
 
 ```{r}
 disney2 |>
@@ -106,38 +107,6 @@ disney2 |>
   ggplot(aes(x = release_year, y = gross_K)) +
   geom_point() + 
   geom_smooth(method = "lm", se = FALSE, color = "blue")
-```
-
-## Subset data 
-
-```{r}
-disney3 <- disney2 |>
-  filter(release_year >= 1990) |>
-  mutate(release_year = as.numeric(release_year))
-```
-
-```{r}
-ggplot(disney3, aes(x = release_year, y = gross_million)) +
-  geom_point(shape = 21, colour = 'black', fill = 'white') +
-  labs(x = 'Release Year', y = '$ Gross Million') +
-  geom_smooth(method='lm', se=FALSE, aes(color = genre)) +
-  ggtitle('$ Gross Million vs Release Year') +
-  theme_bw()
-```
-
-```{r}
-genres = c("Action", "Adventure")
-disney4 <- disney3 |>
-  filter(genre %in% genres )
-```
-
-```{r}
-ggplot(disney4, aes(x = release_year, y = gross_million)) +
-  geom_point(shape = 21, aes(colour = genre), fill = 'white') +
-  labs(x = 'Release Year', y = '$ Gross Million') +
-  geom_smooth(method='lm', se=FALSE, aes(color = genre)) +
-  ggtitle('$ Gross Million vs Release Year') +
-  theme_bw()
 ```
 
 ## Build a model 
@@ -165,12 +134,15 @@ mod3 <-
 summary(mod3)
 ```
 
+R^2 are all very low for the models in the movies data set. We don't have the right variables to predict 
 
-# Model year on total disney revenue
+So now we want to bring in the yearly revenue data set. 
 
-## Read in other data set 
+# Merge in new table for yearly revenue
 
-```{r}
+## Read and join other data set
+
+```{r, message=FALSE, warning=FALSE}
 library(readr)
 revenue <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_revenue_1991-2016.csv")
 
@@ -178,18 +150,20 @@ revenue1 <- revenue |>
   mutate(Year = as.numeric(Year))
 ```
 
-
 ```{r}
 disney4 <- disney2 |>
   mutate(Year = release_year)
-disney4
+head(disney4)
 ```
-
-## Yearly Summary
 
 ```{r}
 movies.revenue <- disney4 |> inner_join(revenue, by = c("Year" = "Year")) 
+head(movies.revenue)
+```
 
+# Yearly Summary 
+
+```{r}
 yearly.summary <- movies.revenue |>
   group_by(Year, Total) |>
   summarize(movie_count = n()) |>
@@ -203,22 +177,13 @@ yearly.summary <- movies.revenue |>
 yearly.summary |>
   ggplot(aes(x = total_revenue)) +
   geom_histogram(bins = 15, fill = "thistle3", color = "black", size = 0.2)+ 
-  ggtitle("Histogram of Yearly Revenue For Disney") + 
-  theme_minimal() + labs(x = "Yearly Revenue", y = "Count")
-```
-
-## Histogram of movie count 
-
-```{r}
-yearly.summary |>
-  ggplot(aes(x = movie_count)) +
-  geom_histogram(bins = 15, fill = "thistle3", color = "black", size = 0.2)+ 
-  ggtitle("Histogram of Yearly Movie Count") + 
-  theme_minimal() + labs(x = "Yearly Movie Count", y = "Count")
-
+  ggtitle("Histogram of Yearly Revenue For Disney (Millions of  US $)") + 
+  theme_minimal() + labs(x = "Yearly Revenue ($ M)", y = "Count")
 ```
 
 
+
+## Linear graphs 
 
 ```{r}
 head(yearly.summary)
@@ -239,13 +204,9 @@ yearly.summary |>
   theme_minimal()
 ```
 
-```{r}
-library(GGally)
-yearly.summary |>
-  mutate(movie_count = sqrt(movie_count)) |>
-  ggpairs() + theme_minimal()
-```
-## Model regressing revenue on year
+# Yearly Revenue
+
+## model
 
 ```{r}
 mod4 <- yearly.summary |>
@@ -254,7 +215,71 @@ mod4 <- yearly.summary |>
 summary(mod4)
 ```
 
-## Add more variables to the model 
+## check line conditions
+
+```{r}
+library(broom)
+
+```
+
+```{r}
+mod4 |>
+  augment() |>
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0, colour = 'blue') +
+  labs(x = 'Fitted Values', y = 'Residuals') +
+  ggtitle('Residual vs Fit') +
+  theme_bw()
+```
+residual vs fit plot shows that it's a time series data set. We don't have the tools yet to analyze this 
+
+# Movie Count 
+
+## Movie Count Per Year 
+
+```{r}
+disney2 |>
+  select(release_year) |>
+  filter(release_year >= 1991) |>
+  group_by(release_year) |>
+  summarise(n = n()) |>
+  ggplot(aes(x = release_year, y = n)) + 
+  geom_col(fill = "thistle3", color = "black", size = 0.2)+ 
+  ggtitle("Movie Count Per Year") + 
+  theme_minimal() + labs(x = "Release Year", y = "Count")
+```
+
+```{r}
+mod.moviecount <- yearly.summary |>
+  lm(formula = total_revenue ~ movie_count)
+```
+
+```{r}
+mod.moviecount |>
+  augment() |>
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0, colour = 'blue') +
+  labs(x = 'Fitted Values', y = 'Residuals') +
+  ggtitle('Residual vs Fit') +
+  theme_bw()
+```
+
+
+```{r}
+mod.moviecount |>
+  augment() |>
+ggplot(aes(sample = .resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  ggtitle('Normal Q-Q Plot') +
+  theme_bw()
+```
+
+
+
+# Genre Count
 
 ```{r}
 movies.revenue2 <- movies.revenue |>
@@ -262,7 +287,8 @@ movies.revenue2 <- movies.revenue |>
          adventure = ifelse(genre == "Adventure",1,0),
          musical = ifelse(genre == "Musical", 1, 0),
          drama = ifelse(genre == "Drama", 1, 0),
-         comedy = ifelse(genre == "Comedy", 1, 0))
+         comedy = ifelse(genre == "Comedy", 1, 0)) |>
+  filter(Year >= 1992)
 
 head(movies.revenue2)
 ```
@@ -283,18 +309,75 @@ yearly.summary2 <- movies.revenue2 |>
 head(yearly.summary2)
 ```
 
+## Histogram of movie count 
+
+```{r}
+yearly.summary2 |>
+  ggplot(aes(x = movie_count)) +
+  geom_histogram(bins = 10, fill = "thistle3", color = "black", size = 0.2)+ 
+  ggtitle("Histogram of Yearly Movie Count") + 
+  theme_minimal() + labs(x = "Yearly Movie Count", y = "Count")
+
+```
+
+
+## Histogram of comedy count 
+
+```{r}
+yearly.summary2 |>
+  ggplot(aes(x = comedy)) +
+  geom_histogram(bins = 10, fill = "thistle3", color = "black", size = 0.2)+ 
+  ggtitle("Histogram of Yearly Comedy Count") + 
+  theme_minimal() + labs(x = "Yearly Comedy Count", y = "Count")
+
+```
+
 ## model with count of top genres
 
-```{r, message = FALSE, warning = FALSE}
-yearly.summary2 |>
-  ggpairs()
+```{r}
+mod5 <- yearly.summary2 |>
+  lm(formula = total_revenue ~ comedy + movie_count)
+summary(mod5)
 ```
 
 ```{r}
-mod4 <- yearly.summary2 |>
-  lm(formula = total_revenue ~ drama + comedy + Year)
+mod5 |>
+  augment() |>
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0, colour = 'blue') +
+  labs(x = 'Fitted Values', y = 'Residuals') +
+  ggtitle('Residual vs Fit') +
+  theme_bw()
+```
 
-summary(mod4)
+```{r}
+mod5 |>
+  augment() |>
+ggplot(aes(sample = .resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  ggtitle('Normal Q-Q Plot') +
+  theme_bw()
+```
+```{r}
+shapiro.test(resid(mod5))
+
+```
+
+
+
+```{r}
+yearly.summary2 |>
+  ggplot(aes(x = musical + comedy, y = total_revenue)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
+  theme_minimal()
+```
+
+```{r}
+yearly.summary2 |>
+  mutate(music.comedy = musical + comedy)
 ```
 
 
