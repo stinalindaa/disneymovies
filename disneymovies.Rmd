@@ -16,6 +16,7 @@ library(skimr)
 library(dplyr)
 library(gt)
 library(scales)
+library(broom)
 ```
 
 ### Disney movies total gross
@@ -44,7 +45,6 @@ head(disney2)
 ### Disney revenue 1991 - 2016
 
 ```{r, message=FALSE, warning=FALSE}
-library(readr)
 revenue <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_revenue_1991-2016.csv")
 skim_without_charts(revenue)
 ```
@@ -219,22 +219,27 @@ disney2 |>
 
 # Appendix E: Which variables best predict the actual revenue per year?
 
+### AIC 
+
 ```{r}
 n = nrow(yearly.summary2)
 mod0 = lm(total_revenue ~ 1, data = yearly.summary2)
 mod.all = lm(total_revenue ~., data = yearly.summary2)
 step(mod0, scope = list(lower = mod0, upper = mod.all))
 ```
-### model with count of top genres
+
+### AIC Model
 
 ```{r}
-mod5 <- yearly.summary2 |>
+mod.full <- yearly.summary2 |>
   lm(formula = total_revenue ~ comedy + movie_count)
-summary(mod5)
+summary(mod.full)
 ```
 
+### Model assumptions
+
 ```{r}
-mod5 |>
+mod.full |>
   augment() |>
   ggplot(aes(x = .fitted, y = .resid)) +
   geom_point() +
@@ -244,8 +249,9 @@ mod5 |>
   theme_bw()
 ```
 
+
 ```{r}
-mod5 |>
+mod.full |>
   augment() |>
 ggplot(aes(sample = .resid)) +
   stat_qq() +
@@ -254,110 +260,30 @@ ggplot(aes(sample = .resid)) +
   theme_bw()
 ```
 
-
 ```{r}
-shapiro.test(resid(mod5))
+shapiro.test(resid(mod.full))
 ```
 
 
 
-```{r}
-yearly.summary2 |>
-  ggplot(aes(x = musical + comedy, y = total_revenue)) +
-  geom_point(shape = 21, color = "black") + 
-  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
-  theme_minimal()
-```
 
 ### Linear graphs 
 
 ```{r}
-head(yearly.summary)
-
-yearly.summary |>
-  ggplot(aes(x = Year, y = total_revenue)) +
-  geom_point(shape = 21, color = "black") + 
-  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
-  theme_minimal()
-```
-
-
-```{r}
-yearly.summary |>
+yearly.summary2 |>
   ggplot(aes(x = movie_count, y = total_revenue)) +
   geom_point(shape = 21, color = "black") + 
   geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
   theme_minimal()
 ```
 
-### Yearly Revenue model
-
 ```{r}
-mod4 <- yearly.summary |>
-  lm(formula = total_revenue ~ Year)
-
-summary(mod4)
+yearly.summary2 |>
+  ggplot(aes(x = comedy, y = total_revenue)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
+  theme_minimal()
 ```
-
-### check line conditions
-
-```{r}
-library(broom)
-
-mod4 |>
-  augment() |>
-  ggplot(aes(x = .fitted, y = .resid)) +
-  geom_point() +
-  geom_hline(yintercept = 0, colour = 'blue') +
-  labs(x = 'Fitted Values', y = 'Residuals') +
-  ggtitle('Residual vs Fit') +
-  theme_bw()
-```
-residual vs fit plot shows that it's a time series data set. We don't have the tools yet to analyze this 
-
-# Movie Count 
-
-### Movie Count Per Year 
-
-```{r}
-disney2 |>
-  select(release_year) |>
-  filter(release_year >= 1991) |>
-  group_by(release_year) |>
-  summarise(n = n()) |>
-  ggplot(aes(x = release_year, y = n)) + 
-  geom_col(fill = "thistle3", color = "black", size = 0.2)+ 
-  ggtitle("Movie Count Per Year") + 
-  theme_minimal() + labs(x = "Release Year", y = "Count")
-```
-
-```{r}
-mod.moviecount <- yearly.summary |>
-  lm(formula = total_revenue ~ movie_count)
-```
-
-```{r}
-mod.moviecount |>
-  augment() |>
-  ggplot(aes(x = .fitted, y = .resid)) +
-  geom_point() +
-  geom_hline(yintercept = 0, colour = 'blue') +
-  labs(x = 'Fitted Values', y = 'Residuals') +
-  ggtitle('Residual vs Fit') +
-  theme_bw()
-```
-
-
-```{r}
-mod.moviecount |>
-  augment() |>
-ggplot(aes(sample = .resid)) +
-  stat_qq() +
-  stat_qq_line() +
-  ggtitle('Normal Q-Q Plot') +
-  theme_bw()
-```
-
 
 
 
@@ -385,15 +311,13 @@ yearly.summary2 |>
 ```
 
 
-
-```{r}
-yearly.summary2 |>
-  mutate(music.comedy = musical + comedy)
-```
-
-
 # Appendix F: What is Disney’s expected total revenue in a year where they release 10 movies and 2 of them are comedies?
 
-# Appendix G: Unused model 
+```{r}
+new = data.frame(comedy = 2, movie_count = 10)
+prediction = predict(mod.full,new,interval = "prediction", level = 0.95)
+prediction
+```
+
 
 
