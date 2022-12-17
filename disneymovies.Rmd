@@ -8,24 +8,25 @@ date: "2022-12-05"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Read In Data Set
-
+# Appendix A: Data Cleaning
 ```{r}
 library(readr)
 library(tidyverse)
 library(skimr)
-disney <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_movies_total_gross.csv")
+library(dplyr)
+library(gt)
+library(scales)
 ```
 
-```{r}
+### Disney movies total gross
+```{r, message=FALSE, warning=FALSE}
+disney <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_movies_total_gross.csv")
 skim_without_charts(disney)
 ```
 
-# Data Cleaning
+Clean up variables and drop NA's.
 
 ```{r}
-library(dplyr)
-
 disney2 <- disney |>
   mutate(genre = factor(genre), 
          rating = factor(MPAA_rating, levels = c("G", "PG", "PG-13", "R")), 
@@ -37,21 +38,79 @@ disney2 <- disney |>
   select(-total_gross, -inflation_adjusted_gross, -MPAA_rating ) |>
   drop_na() |>
   filter(release_year >= 1992)
+head(disney2)
 ```
 
-# Exporatory Data Analysis
+### Disney revenue 1991 - 2016
 
-## Skim 
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+revenue <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_revenue_1991-2016.csv")
+skim_without_charts(revenue)
+```
+
+### movies.revenue
+
+```{r}
+movies.revenue <- disney2 |>
+  mutate(Year = release_year) |> 
+  inner_join(revenue, by = c("Year" = "Year")) 
+head(movies.revenue)
+```
+
+### yearly.summary
+
+```{r}
+yearly.summary <- movies.revenue |>
+  group_by(Year, Total) |>
+  summarize(movie_count = n()) |>
+  rename(total_revenue = Total) |>
+  ungroup()
+head(yearly.summary)
+```
+
+
+### movies.revenue2
+
+```{r}
+movies.revenue2 <- movies.revenue |>
+  mutate(action = ifelse(genre == "Action", 1, 0),
+         adventure = ifelse(genre == "Adventure",1,0),
+         musical = ifelse(genre == "Musical", 1, 0),
+         drama = ifelse(genre == "Drama", 1, 0),
+         comedy = ifelse(genre == "Comedy", 1, 0)) |>
+  filter(Year >= 1992)
+head(movies.revenue2)
+```
+
+### yearly.summary2
+
+```{r}
+yearly.summary2 <- movies.revenue2 |>
+  group_by(Year, Total) |>
+  summarize(movie_count = n(),
+            action_count = sum(action),
+            adventure = sum(adventure),
+            musical = sum(musical),
+            drama = sum(drama),
+            comedy = sum(comedy)) |>
+  rename(total_revenue = Total) |>
+  ungroup()
+
+head(yearly.summary2)
+```
+
+
+# Appendix B: Exporatory Data Analysis
+
+### Disney movies total gross
+
 ```{r}
 skim_without_charts(disney2)
 ```
 
-## Ratings
-
 ```{r}
-
 colors = c("thistle3", "thistle4", "rosybrown3", "rosybrown4")
-
 disney2 |>
   group_by(rating) |>
   summarize(n = n()) |>
@@ -60,30 +119,8 @@ disney2 |>
   scale_fill_manual(values = colors) +
   ggtitle("Top Movie Ratings")+ labs(x = "MPAA Rating", y = "Count") + 
   theme_minimal() + theme(legend.position = "none")
-
-
 ```
 
-## Genres (pink pallet)
-
-```{r}
-colors4 = c("thistle4", "thistle3", "rosybrown4", "rosybrown3", "lightpink4", "lightpink3")
-
-disney2 |>
-  select(genre) |>
-  group_by(genre) |>
-  summarise(n = n()) |>
-  head(6) |>
-  ggplot(aes(x = reorder(genre, -n), y = n)) + 
-  geom_col(aes(fill = reorder(genre, -n)), color = "black", size = .2) +
-  scale_fill_manual(values = colors4) +
-  ggtitle("Top genres") + labs(x = "Genre", y = "Count") + 
-  theme_minimal() + theme(legend.position = "none")
-
-```
-
-
-## Movie Count Per Year 
 
 ```{r}
 disney2 |>
@@ -97,81 +134,8 @@ disney2 |>
   theme_minimal() + labs(x = "Release Year", y = "Count")
 ```
 
-# Release Year v Gross
 
-## Linear Plot
-
-```{r}
-disney2 |>
-  mutate(release_year = as.numeric(release_year)) |>
-  ggplot(aes(x = release_year, y = gross_K)) +
-  geom_point() + 
-  geom_smooth(method = "lm", se = FALSE, color = "blue")
-```
-
-## Build a model 
-
-```{r}
-mod <- disney2 |>
-  lm(formula = gross ~ release_year)
-summary(mod)
-
-```
-
-```{r}
-mod2 <- 
-  disney2 |>
-  lm(formula = gross ~ genre + rating)
-
-summary(mod2)
-```
-
-```{r}
-mod3 <- 
-  disney2 |>
-  lm(formula = gross ~ release_year + genre + rating)
-
-summary(mod3)
-```
-
-R^2 are all very low for the models in the movies data set. We don't have the right variables to predict 
-
-So now we want to bring in the yearly revenue data set. 
-
-# Merge in new table for yearly revenue
-
-## Read and join other data set
-
-```{r, message=FALSE, warning=FALSE}
-library(readr)
-revenue <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_revenue_1991-2016.csv")
-
-revenue1 <- revenue |>
-  mutate(Year = as.numeric(Year))
-```
-
-```{r}
-disney4 <- disney2 |>
-  mutate(Year = release_year)
-head(disney4)
-```
-
-```{r}
-movies.revenue <- disney4 |> inner_join(revenue, by = c("Year" = "Year")) 
-head(movies.revenue)
-```
-
-# Yearly Summary 
-
-```{r}
-yearly.summary <- movies.revenue |>
-  group_by(Year, Total) |>
-  summarize(movie_count = n()) |>
-  rename(total_revenue = Total) |>
-  ungroup()
-```
-
-## Histogram of revenue
+### Yearly summary 
 
 ```{r}
 yearly.summary |>
@@ -181,9 +145,131 @@ yearly.summary |>
   theme_minimal() + labs(x = "Yearly Revenue ($ M)", y = "Count")
 ```
 
+# Appendix C: What are the highest and lowest grossing movies?
+
+### Highest
+
+```{r}
+movies.revenue2 |>
+  select(movie_title,genre,rating,Year,gross_million) %>%
+  arrange(desc(gross_million)) %>%
+  head(8) %>%
+  gt(rowname_col = "movie_title") %>%
+  tab_header(
+    title = md("Summary of the **$ Gross Revenue Per Movie** from 1992 to 2016"),
+    subtitle = md("Million US $")) %>%
+  tab_source_note(
+    source_note = md("This file contains data on the Revenue and Gross of the Walt Disney Company from 1992 to 2016")) %>%
+  tab_caption(
+    caption = md("Source: Disney Character Success from Kaggle")) %>%
+  tab_stubhead(label = md("Movies")) %>%
+  opt_table_font(font = google_font("Mouse Memoirs"), weight = 100) %>%
+  cols_label(genre = "Genre",
+             rating = "Rating",
+             gross_million = "$ Gross") %>%
+  data_color(
+    columns = gross_million,
+    fn = scales::col_numeric(
+      palette = "RdPu",
+      domain = c(1000, 480))) 
+```
+
+### Lowest 
+
+```{r}
+movies.revenue2 |>
+  select(movie_title,genre,rating,Year,gross_million) %>%
+  arrange(gross_million) %>%
+  head(8) %>%
+  gt(rowname_col = "movie_title") %>%
+  tab_header(
+    title = md("Summary of the **Gross Revenue Per Movie** from 1992 to 2016"),
+    subtitle = md("Million US $")) %>%
+  tab_source_note(
+    source_note = md("This file contains data on the Revenue and Gross of the Walt Disney Company from 1992 to 2016")) %>%
+  tab_caption(
+    caption = md("Source: Disney Character Success from Kaggle")) %>%
+  tab_stubhead(label = md("Movies")) %>%
+  opt_table_font(font = google_font("Mouse Memoirs"), weight = 100) %>%
+  cols_label(genre = "Genre",
+             rating = "Rating",
+             gross_million = "$ Gross") %>%
+  data_color(
+    columns = gross_million,
+    fn = scales::col_numeric(
+      palette = "magma",
+      domain = c(0, 0.8))) 
+```
+
+# Appendix D: What is the most common genre produced by Disney?
+
+```{r}
+colors4 = c("thistle4", "thistle3", "rosybrown4", "rosybrown3", "lightpink4", "lightpink3")
+disney2 |>
+  select(genre) |>
+  group_by(genre) |>
+  summarise(n = n()) |>
+  head(6) |>
+  ggplot(aes(x = reorder(genre, -n), y = n)) + 
+  geom_col(aes(fill = reorder(genre, -n)), color = "black", size = .2) +
+  scale_fill_manual(values = colors4) +
+  ggtitle("Top genres") + labs(x = "Genre", y = "Count") + 
+  theme_minimal() + theme(legend.position = "none")
+```
+
+# Appendix E: Which variables best predict the actual revenue per year?
+
+```{r}
+n = nrow(yearly.summary2)
+mod0 = lm(total_revenue ~ 1, data = yearly.summary2)
+mod.all = lm(total_revenue ~., data = yearly.summary2)
+step(mod0, scope = list(lower = mod0, upper = mod.all))
+```
+### model with count of top genres
+
+```{r}
+mod5 <- yearly.summary2 |>
+  lm(formula = total_revenue ~ comedy + movie_count)
+summary(mod5)
+```
+
+```{r}
+mod5 |>
+  augment() |>
+  ggplot(aes(x = .fitted, y = .resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0, colour = 'blue') +
+  labs(x = 'Fitted Values', y = 'Residuals') +
+  ggtitle('Residual vs Fit') +
+  theme_bw()
+```
+
+```{r}
+mod5 |>
+  augment() |>
+ggplot(aes(sample = .resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  ggtitle('Normal Q-Q Plot') +
+  theme_bw()
+```
 
 
-## Linear graphs 
+```{r}
+shapiro.test(resid(mod5))
+```
+
+
+
+```{r}
+yearly.summary2 |>
+  ggplot(aes(x = musical + comedy, y = total_revenue)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
+  theme_minimal()
+```
+
+### Linear graphs 
 
 ```{r}
 head(yearly.summary)
@@ -204,9 +290,7 @@ yearly.summary |>
   theme_minimal()
 ```
 
-# Yearly Revenue
-
-## model
+### Yearly Revenue model
 
 ```{r}
 mod4 <- yearly.summary |>
@@ -215,14 +299,11 @@ mod4 <- yearly.summary |>
 summary(mod4)
 ```
 
-## check line conditions
+### check line conditions
 
 ```{r}
 library(broom)
 
-```
-
-```{r}
 mod4 |>
   augment() |>
   ggplot(aes(x = .fitted, y = .resid)) +
@@ -236,7 +317,7 @@ residual vs fit plot shows that it's a time series data set. We don't have the t
 
 # Movie Count 
 
-## Movie Count Per Year 
+### Movie Count Per Year 
 
 ```{r}
 disney2 |>
@@ -279,37 +360,8 @@ ggplot(aes(sample = .resid)) +
 
 
 
-# Genre Count
 
-```{r}
-movies.revenue2 <- movies.revenue |>
-  mutate(action = ifelse(genre == "Action", 1, 0),
-         adventure = ifelse(genre == "Adventure",1,0),
-         musical = ifelse(genre == "Musical", 1, 0),
-         drama = ifelse(genre == "Drama", 1, 0),
-         comedy = ifelse(genre == "Comedy", 1, 0)) |>
-  filter(Year >= 1992)
-
-head(movies.revenue2)
-```
-## yearly summary with count of top genres
-
-```{r}
-yearly.summary2 <- movies.revenue2 |>
-  group_by(Year, Total) |>
-  summarize(movie_count = n(),
-            action_count = sum(action),
-            adventure = sum(adventure),
-            musical = sum(musical),
-            drama = sum(drama),
-            comedy = sum(comedy)) |>
-  rename(total_revenue = Total) |>
-  ungroup()
-
-head(yearly.summary2)
-```
-
-## Histogram of movie count 
+### Histogram of movie count 
 
 ```{r}
 yearly.summary2 |>
@@ -321,7 +373,7 @@ yearly.summary2 |>
 ```
 
 
-## Histogram of comedy count 
+### Histogram of comedy count 
 
 ```{r}
 yearly.summary2 |>
@@ -332,48 +384,7 @@ yearly.summary2 |>
 
 ```
 
-## model with count of top genres
 
-```{r}
-mod5 <- yearly.summary2 |>
-  lm(formula = total_revenue ~ comedy + movie_count)
-summary(mod5)
-```
-
-```{r}
-mod5 |>
-  augment() |>
-  ggplot(aes(x = .fitted, y = .resid)) +
-  geom_point() +
-  geom_hline(yintercept = 0, colour = 'blue') +
-  labs(x = 'Fitted Values', y = 'Residuals') +
-  ggtitle('Residual vs Fit') +
-  theme_bw()
-```
-
-```{r}
-mod5 |>
-  augment() |>
-ggplot(aes(sample = .resid)) +
-  stat_qq() +
-  stat_qq_line() +
-  ggtitle('Normal Q-Q Plot') +
-  theme_bw()
-```
-```{r}
-shapiro.test(resid(mod5))
-
-```
-
-
-
-```{r}
-yearly.summary2 |>
-  ggplot(aes(x = musical + comedy, y = total_revenue)) +
-  geom_point(shape = 21, color = "black") + 
-  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
-  theme_minimal()
-```
 
 ```{r}
 yearly.summary2 |>
@@ -381,14 +392,8 @@ yearly.summary2 |>
 ```
 
 
+# Appendix F: What is Disney’s expected total revenue in a year where they release 10 movies and 2 of them are comedies?
 
-# Challenges 
-
-- Translate gross revenue from a text variable to a numeric variable 
-- We can't get a very high R^2 value with the variables we have in this data set
-
-
-
-
+# Appendix G: Unused model 
 
 
