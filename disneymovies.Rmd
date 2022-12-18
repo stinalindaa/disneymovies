@@ -89,7 +89,8 @@ yearly.summary2 <- movies.revenue2 |>
             drama = sum(drama),
             comedy = sum(comedy)) |>
   rename(total_revenue = Total) |>
-  ungroup()
+  ungroup() |>
+  select(-Year)
 
 head(yearly.summary2)
 ```
