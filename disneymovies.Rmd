@@ -1,6 +1,6 @@
 ---
-title: "Untitled"
-output: html_document
+title: "Appendix"
+output: pdf_document
 date: "2022-12-05"
 ---
 
@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Appendix A: Data Cleaning
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(readr)
 library(tidyverse)
 library(skimr)
@@ -239,6 +239,24 @@ summary(mod.full)
 ### Model assumptions
 
 ```{r}
+yearly.summary2 |>
+  ggplot(aes(x = movie_count, y = total_revenue)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
+  theme_minimal()
+```
+
+```{r}
+yearly.summary2 |>
+  ggplot(aes(x = comedy, y = total_revenue)) +
+  geom_point(shape = 21, color = "black") + 
+  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
+  theme_minimal()
+```
+
+
+
+```{r}
 mod.full |>
   augment() |>
   ggplot(aes(x = .fitted, y = .resid)) +
@@ -262,27 +280,6 @@ ggplot(aes(sample = .resid)) +
 
 ```{r}
 shapiro.test(resid(mod.full))
-```
-
-
-
-
-### Linear graphs 
-
-```{r}
-yearly.summary2 |>
-  ggplot(aes(x = movie_count, y = total_revenue)) +
-  geom_point(shape = 21, color = "black") + 
-  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
-  theme_minimal()
-```
-
-```{r}
-yearly.summary2 |>
-  ggplot(aes(x = comedy, y = total_revenue)) +
-  geom_point(shape = 21, color = "black") + 
-  geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
-  theme_minimal()
 ```
 
 
