@@ -19,9 +19,11 @@ library(scales)
 library(broom)
 ```
 
-### Disney movies total gross
 ```{r, message=FALSE, warning=FALSE}
-disney <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_movies_total_gross.csv")
+disney <- read_csv(
+  paste('https://raw.githubusercontent.com/stinalindaa/',
+  'disneymovies/main/disney_movies_total_gross.csv', sep = ""))
+  
 skim_without_charts(disney)
 ```
 
@@ -42,14 +44,13 @@ disney2 <- disney |>
 head(disney2)
 ```
 
-### Disney revenue 1991 - 2016
-
 ```{r, message=FALSE, warning=FALSE}
-revenue <- read_csv("/Users/christinalopez/Desktop/STAT471_F22/datasets/disney/disney_revenue_1991-2016.csv")
+revenue <- read_csv(
+  paste('https://raw.githubusercontent.com/stinalindaa/',
+        'disneymovies/main/disney_revenue_1991-2016.csv', sep = ""))
+  
 skim_without_charts(revenue)
 ```
-
-### movies.revenue
 
 ```{r}
 movies.revenue <- disney2 |>
@@ -57,8 +58,6 @@ movies.revenue <- disney2 |>
   inner_join(revenue, by = c("Year" = "Year")) 
 head(movies.revenue)
 ```
-
-### yearly.summary
 
 ```{r}
 yearly.summary <- movies.revenue |>
@@ -68,9 +67,6 @@ yearly.summary <- movies.revenue |>
   ungroup()
 head(yearly.summary)
 ```
-
-
-### movies.revenue2
 
 ```{r}
 movies.revenue2 <- movies.revenue |>
@@ -82,8 +78,6 @@ movies.revenue2 <- movies.revenue |>
   filter(Year >= 1992)
 head(movies.revenue2)
 ```
-
-### yearly.summary2
 
 ```{r}
 yearly.summary2 <- movies.revenue2 |>
@@ -103,7 +97,7 @@ head(yearly.summary2)
 
 # Appendix B: Exporatory Data Analysis
 
-### Disney movies total gross
+Disney movies total gross
 
 ```{r}
 skim_without_charts(disney2)
@@ -135,7 +129,7 @@ disney2 |>
 ```
 
 
-### Yearly summary 
+Yearly summary 
 
 ```{r}
 yearly.summary |>
@@ -147,7 +141,7 @@ yearly.summary |>
 
 # Appendix C: What are the highest and lowest grossing movies?
 
-### Highest
+Highest
 
 ```{r}
 movies.revenue2 |>
@@ -174,7 +168,7 @@ movies.revenue2 |>
       domain = c(1000, 480))) 
 ```
 
-### Lowest 
+Lowest 
 
 ```{r}
 movies.revenue2 |>
@@ -219,7 +213,7 @@ disney2 |>
 
 # Appendix E: Which variables best predict the actual revenue per year?
 
-### AIC 
+Variable selection: 
 
 ```{r}
 n = nrow(yearly.summary2)
@@ -228,7 +222,7 @@ mod.all = lm(total_revenue ~., data = yearly.summary2)
 step(mod0, scope = list(lower = mod0, upper = mod.all))
 ```
 
-### AIC Model
+AIC Model:
 
 ```{r}
 mod.full <- yearly.summary2 |>
@@ -236,7 +230,13 @@ mod.full <- yearly.summary2 |>
 summary(mod.full)
 ```
 
-### Model assumptions
+Check interaction terms: 
+
+```{r}
+add1(mod.full, ~.+comedy*movie_count, test = 'F')
+```
+
+Check Model assumptions: 
 
 ```{r}
 yearly.summary2 |>
@@ -253,8 +253,6 @@ yearly.summary2 |>
   geom_smooth(color = "thistle3", method = "lm", se = FALSE) + 
   theme_minimal()
 ```
-
-
 
 ```{r}
 mod.full |>
@@ -282,9 +280,7 @@ ggplot(aes(sample = .resid)) +
 shapiro.test(resid(mod.full))
 ```
 
-
-
-### Histogram of movie count 
+Histogram of movie count 
 
 ```{r}
 yearly.summary2 |>
@@ -295,8 +291,7 @@ yearly.summary2 |>
 
 ```
 
-
-### Histogram of comedy count 
+Histogram of comedy count 
 
 ```{r}
 yearly.summary2 |>
